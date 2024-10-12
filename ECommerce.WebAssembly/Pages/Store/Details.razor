@@ -1,0 +1,84 @@
+﻿@page "/detail/{id:int}"
+
+@inject IProductService _productService
+@inject ICartService _cartService
+
+<div class="container px-4 px-lg-5 my-5">
+
+
+    @if (model != null)
+    {
+        <div class="row gx-4 gx-lg-5 align-items-center">
+            <div class="col-md-6">
+                <img class="card-img-top border-dark border-1 object-fit-contain" src="@model.Picture" style="width:100%;">
+            </div>
+            <div class="col-md-6">
+                <h1 class="display-5 fw-bolder">@model.NameProduct</h1>
+                <div class="fs-5 mb-3 mb-sm-3 mb-md-3 mb-lg-2 mb-xl-2 mb-xxl-2">
+                    @if (model.OfferPrice != 0 && model.OfferPrice < model.Price)
+                    {
+                        <span class="text-danger text-decoration-line-through">$@model.Price</span>
+                        <span>$@model.OfferPrice</span>
+                    }
+                    else
+                    {
+                        <span>$@model.Price</span>
+                    }
+                </div>
+                <p class="mb-5 mb-sm-5 mb-md-5 mb-lg-3 mb-xl-3 mb-xxl-3">@model.Description</p>
+                <div class="d-flex justify-content-start align-items-center gap-4">
+                    <input class="form-control text-center" type="number" min="1" style="width:80px" @bind-value="amount">
+                    <button class="btn btn-primary d-flex justify-content-center align-items-center gap-2 " type="button" @onclick="(async() => await AddCart(model))">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#ffffff">
+                            <path d="M440-600v-120H320v-80h120v-120h80v120h120v80H520v120h-80ZM280-80q-33 0-56.5-23.5T200-160q0-33 23.5-56.5T280-240q33 0 56.5 23.5T360-160q0 33-23.5 56.5T280-80Zm400 0q-33 0-56.5-23.5T600-160q0-33 23.5-56.5T680-240q33 0 56.5 23.5T760-160q0 33-23.5 56.5T680-80ZM40-800v-80h131l170 360h280l156-280h91L692-482q-11 20-29.5 31T622-440H324l-44 80h480v80H280q-45 0-68.5-39t-1.5-79l54-98-144-304H40Z" />
+    }                   </svg>
+                        Agregar al carrito
+                    </button>
+                    <a class="btn btn-danger d-flex justify-content-center align-items-center gap-2" href="/">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#ffffff">
+                            <path d="m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z" />
+                        </svg>
+                        Volver
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+    private ProductDTO? model = null;
+    private int amount = 1;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var response = await _productService.GetProduct(Id);
+        if (response.IsCorrect)
+        {
+            model = (ProductDTO)response.Result!;
+        }
+    }
+
+    private async Task AddCart(ProductDTO model)
+    {
+        decimal? finalPrice = (model.OfferPrice != 0 && model.OfferPrice < model.Price) ? model.OfferPrice : model.Price;
+        
+        CartDTO cart = new CartDTO()
+            {
+                Product = model,
+                Amount = amount,
+                Price = finalPrice,
+                Total = Convert.ToDecimal(amount) * finalPrice
+            };
+
+        await _cartService.AddToCart(cart);
+    }
+}

@@ -1,0 +1,123 @@
+﻿@page "/users"
+
+@inject IUserService _userService
+@inject IToastService _toastService
+@inject SweetAlertService Swal
+
+@attribute [Authorize(Roles = "Administrador")]
+
+<div class="row justify-content-center  mt-3">
+    <div class="col-sm-6 col-md-4 col-xl-3 mb-4">
+        <div class="d-grid gap-1 col-12 mx-auto">
+            <a class="btn btn-primary" href="/user">Nuevo usuario</a>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-8 col-xl-9 mb-4">
+        <div class="input-group mb-3">
+            <input type="text" class="form-control" placeholder="Buscar usuario..." @bind-value="found">
+            <button class="btn btn-outline-secondary" type="button" @onclick="(async()=> await GetUser(found))">
+                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#ffffff">
+                    <path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z" />
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row gx-4 row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 justify-content-start mt-2">
+
+  
+    @if (listUser != null)
+    {
+        foreach(var item in listUser)
+        {
+            <div class="col mb-5">
+                <div class="card h-100 border border-light">
+                    <div class="card-body p-4">
+                        <div class="text-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#212529">
+                                <path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Zm80-80h480v-32q0-11-5.5-20T700-306q-54-27-109-40.5T480-360q-56 0-111 13.5T260-306q-9 5-14.5 14t-5.5 20v32Zm240-320q33 0 56.5-23.5T560-640q0-33-23.5-56.5T480-720q-33 0-56.5 23.5T400-640q0 33 23.5 56.5T480-560Zm0-80Zm0 400Z" />
+                            </svg>
+                        </div>
+                        <div class="text-start">
+                            <p class="m-1"><b>Nombre:</b> @item.FullName</p>
+                            <p class="m-1"><b>Correo:</b> @item.Email</p>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="row justify-content-between">
+                            <a class="col-5 btn btn-sm btn-primary mt-auto" href="/user/@item.IdUser">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#ffffff">
+                                    <path d="M647-440H160v-80h487L423-744l57-56 320 320-320 320-57-56 224-224Z" />
+                                </svg>
+                            </a>
+                            <button class="col-5 btn btn-sm btn-danger mt-auto" type="button" @onclick="(async () => await DeleteUser(item))">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#ffffff">
+                                    <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    }
+
+</div>
+
+
+@code {
+    private List<UserDTO>? listUser = null;
+    private string found = string.Empty;
+
+    private async Task GetUser(string value = "")
+    {
+        var response = await _userService.ListUser("Administrador", value);
+        if (response.IsCorrect)
+        {
+            listUser =(List<UserDTO>)response.Result!;
+        }
+        else
+        {
+            listUser = new List<UserDTO>();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetUser();
+    }
+
+    private async Task DeleteUser(UserDTO model)
+    {
+        SweetAlertResult result = await Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = "¿Estas Seguro?",
+            Text = $"Eliminar usuario: {model.FullName}",
+            Icon = SweetAlertIcon.Warning,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Si, eliminar",
+            CancelButtonText = "No, volver",
+        });
+
+        if (result.IsConfirmed)
+        {
+            var response = await _userService.DeleteUser(model.IdUser);
+            if (response.IsCorrect)
+            {
+                await GetUser();
+                _toastService.ShowSuccess("Usuario fue eiminado");
+            }
+            else
+            {
+                _toastService.ShowWarning(response.Message);
+            }
+        }
+    }
+}

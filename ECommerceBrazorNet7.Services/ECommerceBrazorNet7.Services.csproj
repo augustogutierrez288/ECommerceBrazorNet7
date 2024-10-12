@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ECommerceBrazorNet7.DTO\ECommerceBrazorNet7.DTO.csproj" />
+    <ProjectReference Include="..\ECommerceBrazorNet7.Model\ECommerceBrazorNet7.Model.csproj" />
+    <ProjectReference Include="..\ECommerceBrazorNet7.Repository\ECommerceBrazorNet7.Repository.csproj" />
+    <ProjectReference Include="..\ECommerceBrazorNet7.Utilities\ECommerceBrazorNet7.Utilities.csproj" />
+  </ItemGroup>
+
+</Project>

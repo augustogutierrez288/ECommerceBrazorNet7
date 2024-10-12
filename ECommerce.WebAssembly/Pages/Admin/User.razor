@@ -1,0 +1,129 @@
+﻿@page "/user"
+@page "/user/{id:int}"
+
+@inject IUserService _userService
+@inject IToastService _toastService
+@inject NavigationManager _navService
+
+@attribute [Authorize(Roles = "Administrador")]
+
+<div class="row justify-content-center  mt-3">
+    <p class="col-sm-12 col-md-8 col-xl-10 h4 mt-2">@title</p>
+</div>
+<div class="row justify-content-center  mt-3">
+    <div class="col-sm-12 col-md-8 col-xl-10">
+        <EditForm Model="model" OnValidSubmit="SaveChanges">
+            <DataAnnotationsValidator></DataAnnotationsValidator>
+
+            <div class="input-group">
+                <span class="input-group-text bg-light" id="basic-addon3">Nombre Completo</span>
+                <input type="text" class="form-control" @bind-value="model.FullName">
+            </div>
+            <ValidationMessage For="@(()=>model.FullName)" />
+
+            <div class="input-group mt-3">
+                <span class="input-group-text bg-light" id="basic-addon3">Correo</span>
+                <input type="text" class="form-control" @bind-value="model.Email"><br />
+            </div>
+            <ValidationMessage For="@(()=>model.Email)" />
+
+            <div class="input-group mt-3">
+                <span class="input-group-text bg-light" id="basic-addon3">Contraseña</span>
+                <input type="password" class="form-control" @bind-value="model.Password">
+            </div>
+            <ValidationMessage For="@(()=>model.Password)" />
+
+            <div class="input-group mt-3">
+                <span class="input-group-text bg-light" id="basic-addon3">Confirmar Contraseña</span>
+                <input type="password" class="form-control" @bind-value="model.ConfirmPassword">
+            </div>
+            <ValidationMessage For="@(()=>model.ConfirmPassword)" />
+
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary" style="width:130px">@button</button>
+                <a href="/users" class="btn btn-secondary" style="width:130px">Volver</a>
+            </div>
+        </EditForm>
+
+
+    </div>
+
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+    private string title = "Nuevo usuario";
+    private string button = "Crear";
+    private UserDTO model = new UserDTO();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if(Id != 0)
+        {
+            title = "Editar usuario";
+            button = "Actualizar";
+
+            var response = await _userService.GetUser(Id);
+            if (response.IsCorrect)
+            {
+                model = (UserDTO)response.Result!;
+                model.ConfirmPassword = model.Password;
+            }
+            else
+            {
+                _toastService.ShowError(response.Message);
+            }
+        }
+    }
+
+    private async Task SaveChanges()
+    {
+        if(model.Password != model.ConfirmPassword)
+        {
+            _toastService.ShowWarning("Las contraseñas no coinciden");
+            return;
+        }
+
+        bool response = true;
+        string message = string.Empty;
+
+        if(Id != 0)
+        {
+            var res = await _userService.UpdateUser(model);
+            if (res.IsCorrect)
+            {
+                message = "Usuario fue modificado";
+            }
+            else
+            {
+                response = false;
+                message = "No se pudo editar";
+            }
+        }
+        else
+        {
+            model.Role = "Administrador";
+            var res = await _userService.CreateUser(model);
+            if (res.IsCorrect)
+            {
+                message = "El usuario fue creado";
+            }
+            else
+            {
+                response = false;
+                message = "No se pudo crear el usuario";
+            }
+        }
+
+        if (response)
+        {
+            _toastService.ShowSuccess(message);
+            _navService.NavigateTo("/users");
+        }
+        else
+        {
+            _toastService.ShowError(message);
+        }
+    }
+}

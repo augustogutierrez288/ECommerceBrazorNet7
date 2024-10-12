@@ -1,0 +1,135 @@
+﻿@page "/products"
+
+@inject IProductService _productService
+@inject IToastService _toastService
+@inject SweetAlertService Swal
+
+@attribute [Authorize(Roles = "Administrador")]
+
+<div class="row justify-content-center  mt-3">
+    <div class="col-sm-6 col-md-4 col-xl-3 mb-4">
+        <div class="d-grid gap-1 col-12 mx-auto">
+            <a class="btn btn-primary" href="/product">Nuevo producto</a>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-8 col-xl-9 mb-4">
+        <div class="input-group mb-3">
+            <input type="text" class="form-control" placeholder="Buscar producto..." @bind-value="found">
+            <button class="btn btn-primary" type="button" @onclick="(async()=> await GetProduct(found))">
+                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#ffffff">
+                    <path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z" />
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row gx-4 row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 justify-content-start mt-2">
+
+    @if (listProduct != null)
+    {
+
+        foreach (var item in listProduct)
+        {
+            <div class="col mb-5">
+                <div class="card h-auto border border-light">
+                    <!-- Sale badge-->
+                    @if(DateTime.Now < item.CreationDate.Value.AddDays(30))
+                    {
+                        <div class="badge bg-primary text-white position-absolute" style="top: 0.5rem; right: 0.5rem">Nuevo</div>
+                    }
+                    <!-- Product image-->
+                    <img class="card-img-top border-light border-1 object-fit-cover" src="@item.Picture">
+                    <!-- Product details-->
+                    <div class="card-body p-4">
+                        <div class="text-center">
+                            <!-- Product name-->
+                            <h5 class="fw-bolder">@item.NameProduct</h5>
+                            <!-- Product price-->
+                            @if(item.OfferPrice != 0 && item.OfferPrice < item.Price)
+                            {
+                                <span class="text-danger text-decoration-line-through">$@item.Price</span>
+                                <span>$@item.OfferPrice</span>
+                            }else{
+                                <span>$@item.Price</span>
+                            }
+                        </div>
+                    </div>
+                    <!-- Product actions-->
+                    <div class="card-footer bg-transparent">
+                        <div class="row justify-content-between">
+                            <a class="col-5 btn btn-sm btn-primary mt-auto" href="/product/@item.IdProduct">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#ffffff">
+                                    <path d="M647-440H160v-80h487L423-744l57-56 320 320-320 320-57-56 224-224Z" />
+                                </svg>
+                            </a>
+                            <button class="col-5 btn btn-sm btn-danger mt-auto" @onclick="(async () => await DeleteProduct(item))">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#ffffff">
+                                    <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    }
+
+
+</div>
+
+@code {
+    private List<ProductDTO>? listProduct = null;
+    private string found = string.Empty;
+
+    private async Task GetProduct(string value = "")
+    {
+        var response = await _productService.ListProduct(value);
+        if (response.IsCorrect)
+        {
+            listProduct = (List<ProductDTO>)response.Result!;
+        }
+        else
+        {
+            listProduct = new List<ProductDTO>();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetProduct();
+    }
+
+    private async Task DeleteProduct(ProductDTO model)
+    {
+        SweetAlertResult result = await Swal.FireAsync(new SweetAlertOptions
+            {
+                Title = "¿Estas Seguro?",
+                Text = $"Eliminar el producto: {model.NameProduct}",
+                Icon = SweetAlertIcon.Warning,
+                ShowCancelButton = true,
+                ConfirmButtonText = "Si, eliminar",
+                CancelButtonText = "No, volver",
+            });
+
+        if (result.IsConfirmed)
+        {
+            var response = await _productService.DeleteProduct(model.IdProduct);
+            if (response.IsCorrect)
+            {
+                await GetProduct();
+                _toastService.ShowSuccess("El producto fue eiminado");
+            }
+            else
+            {
+                _toastService.ShowWarning(response.Message);
+            }
+        }
+    }
+}
